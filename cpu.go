@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 )
 
 type cpu struct {
@@ -116,7 +117,7 @@ func (c *cpu) emulateCycle() {
 		c.PC += 2               // Increment program counter by 2
 		// If the next opcode should be skiped, increase the PC by 4.
 	case 0x1000: // 1NNN: Jumps to address NNN
-		// Como salta no aumentamos SP
+		// Jumps, so we don't increment SP
 		c.PC = c.opcode & 0x0FFF
 	case 0x2000: // 2NNN
 		// Call subroutine at address NNN
@@ -202,7 +203,17 @@ func (c *cpu) emulateCycle() {
 		default:
 			fmt.Printf("Unknown opcode: 0x%X\n", c.opcode)
 		}
-
+	case 0x9000: // 9XY0: Skips the next instruction if VX does not equal VY
+		if c.V[(c.opcode&0x0F00)>>8] != c.V[(c.opcode&0x00F0)>>4] {
+			c.PC += 4
+		} else {
+			c.PC += 2
+		}
+	case 0xB000: // BNNN: Jumps to the addres plus V0. PC = V0 + NNN
+		c.PC = uint16(c.V[0x0] + byte(c.opcode&0x0FFF))
+	case 0xC000: // 0xCXNN: Sets Vx to the result of a bitwise AND operation on a random number and NN.
+		c.V[(c.opcode&0x0F00)>>8] = byte(rand.Intn(256)) & 0x00FF
+		c.PC += 2
 	case 0x0033: // FX33
 		// Stores the binary-coded decimal representation of VX in memory locations I, I+1, and I+2.
 		c.memory[c.I] = c.V[(c.opcode&0x0F00)>>8] / 100
