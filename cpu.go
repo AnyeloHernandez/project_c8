@@ -1,5 +1,9 @@
 package main
 
+import (
+	"fmt"
+)
+
 type cpu struct {
 	opcode      uint16
 	memory      [4096]byte
@@ -12,8 +16,27 @@ type cpu struct {
 	sound_timer byte          // Sound timer
 	stack       [16]uint16    // Stack for subroutine calls
 	key         [16]byte      // Key state (0-15)
-	fontset     [80]byte      // Fontset for Chip 8
 	drawFlag    bool
+}
+
+// CHIP-8 fontset: each character is 4x5 pixels
+var chip8_fontset = [80]byte{
+	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+	0x20, 0x60, 0x20, 0x20, 0x70, // 1
+	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+	0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+	0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 }
 
 /*
@@ -29,9 +52,9 @@ func (c *cpu) init() {
 	c.opcode = 0x000 // Reset opcode
 	c.SP = 0x00      // Stack pointer starts at 0x00
 
-	// Load fontset
+	// Load fontset into memory
 	for i := 0; i < 80; i++ {
-		c.memory[i] = c.fontset[i]
+		c.memory[i+0x50] = chip8_fontset[i]
 	}
 }
 
@@ -71,25 +94,115 @@ func (c *cpu) emulateCycle() {
 	*/
 
 	switch c.opcode & 0xF000 {
-	case 0xA000:
+	case 0x0000:
+		switch c.opcode & 0x000F {
+		case 0x0000: // 0x00E0: Clears the screen
+			for i := 0; i < 2048; i++ {
+				c.gfx[i] = 0x0
+			}
+			c.drawFlag = true
+			c.PC += 2
+		case 0x000E: // 0x00EE: Returns from a subroutine
+			c.SP--               // Decrement stack pointer
+			c.PC = c.stack[c.SP] // Set program counter to the address at the
+			// top of the stack
+			c.PC += 2 // Increment program counter by 2
+		default:
+			fmt.Printf("Unknown opcode: 0x%X\n", c.opcode)
+		}
+
+	case 0xA000: // ANNN
 		c.I = c.opcode & 0x0FFF // Set index register
 		c.PC += 2               // Increment program counter by 2
 		// If the next opcode should be skiped, increase the PC by 4.
-	case 0x2000:
+	case 0x1000: // 1NNN: Jumps to address NNN
+		// Como salta no aumentamos SP
+		c.PC = c.opcode & 0x0FFF
+	case 0x2000: // 2NNN
 		// Call subroutine at address NNN
 		c.stack[c.SP] = c.PC
 		c.SP++
 		c.PC = c.opcode & 0x0FFF
-		// We are calling a subroutine, so we not increment the PC by 2.
-	case 0x0004: // 8XY4
-		// Adds VY to VX. Vf is set to 1 when there's an overflow, and to 0 when there is not.
-		if c.V[(c.opcode&0x00F0)>>4] > (0xFF - c.V[(c.opcode&0x0F00)>>8]) {
-			c.V[0xF] = 1 // Set carry flag
+	// We are calling a subroutine, so we not increment the PC by 2.
+	case 0x3000: // 0x3XNN (Type: conditional)
+		// Skips the next instruction if VX equals NN
+		if c.V[(c.opcode&0x0F00)>>8] == byte(c.opcode&0x00FF) {
+			c.PC += 4 // Skip next instruction
 		} else {
-			c.V[0xF] = 0 // Clear carry flag
+			c.PC += 2 // Just increment PC by 2
 		}
-		c.V[(c.opcode&0x0F00)>>8] += c.V[(c.opcode&0x00F0)>>4]
+	case 0x4000: // 0x4XNN (Type: conditional)
+		// Skips the next instruction if VX does not equal NN
+		if c.V[(c.opcode&0x0F00)>>8] != byte(c.opcode&0x00FF) {
+			c.PC += 4 // Skip next instruction
+		} else {
+			c.PC += 2 // Just increment PC by 2
+		}
+	case 0x5000: // 0x5XY0 (Type: conditional)
+		// Skips the next instruction if VX equals VY
+		if c.V[(c.opcode&0x0F00)>>8] == c.V[(c.opcode&0x00F0)>>4] {
+			c.PC += 4 // Skip next instruction
+		} else {
+			c.PC += 2 // Just increment PC by 2
+		}
+	case 0x6000: // 0x6XNN (Type: const)
+		// Sets VX to NN
+		c.V[(c.opcode&0x0F00)>>8] = byte(c.opcode & 0x00FF)
+		c.PC += 2 // Increment program counter
+	case 0x7000: // 0x7XNN (Type: const)
+		// Adds NN to VX (Carry flag not changed)
+		c.V[(c.opcode&0x0F00)>>8] += byte(c.opcode & 0x00FF)
 		c.PC += 2
+	case 0x8000: // 8XYn
+		switch c.opcode & 0x000F {
+		case 0x0000: // 8XY0: Sets Vx to the value of Vy
+			c.V[(c.opcode&0x0F00)>>8] = c.V[byte(c.opcode&0x00F0>>4)]
+			c.PC += 2
+		case 0x0001: // 8XY1: Sets Vx to Vx OR Vy
+			c.V[(c.opcode&0x0F00)>>8] |= c.V[byte(c.opcode&0x00F0>>4)]
+			c.PC += 2
+		case 0x0002: // 8XY2: Sets Vx to Vx AND Vy
+			c.V[(c.opcode&0x0F00)>>8] &= c.V[byte(c.opcode&0x00F0>>4)]
+			c.PC += 2
+		case 0x0003: // 8XY3: Sets Vx to Vx XOR Vy
+			c.V[(c.opcode&0x0F00)>>8] ^= c.V[byte(c.opcode&0x00F0>>4)]
+			c.PC += 2
+		case 0x0004: // 8XY4: Adds Vy to Vx. VF is set to 1 when there's overflow. 0 when not
+			// Adds VY to VX. Vf is set to 1 when there's an overflow, and to 0 when there is not.
+			if c.V[(c.opcode&0x00F0)>>4] > (0xFF - c.V[(c.opcode&0x0F00)>>8]) {
+				c.V[0xF] = 1 // Set carry flag
+			} else {
+				c.V[0xF] = 0 // Clear carry flag
+			}
+			c.V[(c.opcode&0x0F00)>>8] += c.V[(c.opcode&0x00F0)>>4]
+			c.PC += 2
+		case 0x0005: // 8XY5: Vy is subtracted from Vx. VF is set to 0 when there's and underflow. 1 when not
+			if c.V[(c.opcode&0x0F00)>>8] >= c.V[(c.opcode&0x00F0)>>4] {
+				c.V[0xF] = 1
+			} else {
+				c.V[0xF] = 0
+			}
+			c.V[(c.opcode&0x0F00)>>8] -= c.V[(c.opcode&0x00F0)>>4]
+		case 0x0006: // 8XY6: Set Vx to Vy and shift Vx one bit to the right, set Vf to the bit shifted out, even if X=F!
+			c.V[0xF] = c.V[(c.opcode&0x0F00)>>8] & 0x1
+			c.V[(c.opcode&0x0F00)>>8] >>= 1
+			c.PC += 2
+		case 0x0007: // 8XY7: Set Vx to the result of subtracting Vx from Vy, Vf is set to 0 if an underflow happened, to 1 if not, even if X=F!
+			if c.V[(c.opcode&0x0F00)>>8] <= c.V[(c.opcode&0x00F0)>>4] {
+				c.V[0xF] = 1
+			} else {
+				c.V[0xF] = 0
+			}
+			c.V[(c.opcode&0x0F00)>>8] = c.V[(c.opcode&0x0F00)>>8] - c.V[(c.opcode&0x00F0)>>4]
+			c.PC += 2
+		case 0x000E: // 8XYE: Set Vx to Vy and shift Vx one bit to the left, set Vf to the bit shifted out, even if X=F!
+			c.V[0xF] = c.V[(c.opcode&0x0F00)>>8] >> 7
+			c.V[(c.opcode&0x0F00)>>8] <<= 1
+			c.PC += 2
+		default:
+			fmt.Printf("Unknown opcode: 0x%X\n", c.opcode)
+		}
+
 	case 0x0033: // FX33
 		// Stores the binary-coded decimal representation of VX in memory locations I, I+1, and I+2.
 		c.memory[c.I] = c.V[(c.opcode&0x0F00)>>8] / 100
@@ -109,20 +222,43 @@ func (c *cpu) emulateCycle() {
 		height := uint32(c.opcode & 0x000F)
 		var pixel uint32
 
-		c.V[0xF] = 0
+		c.V[0xF] = 0 // Resets the register VF (Collision flag)
 		for yline := 0; yline < int(height); yline++ {
 			pixel = uint32(c.memory[c.I+uint16(yline)])
 			for xline := 0; xline < 8; xline++ {
 				if pixel&(0x80>>xline) != 0 {
 					if c.gfx[(x+uint32(xline)+((y+uint32(yline))*64))] == 1 {
+						// If pixel is set to 1, set VF to 1 (collision)
 						c.V[0xF] = 1
 					}
+					// Set the pixel value by using XOR
 					c.gfx[x+uint32(xline)+((y+uint32(yline))*64)] ^= 1
 				}
 			}
 		}
 		c.drawFlag = true
 		c.PC += 2
+	case 0xE000: // 0xE000 is a prefix for key input opcodes
+		/*
+			0xE09E: Skip next instruction if key with value of Vx is pressed
+			0xE0A1: Skip next instruction if key with value of Vx is not pressed
+
+			It doesn't matter which key is pressed, we just check the key state
+		*/
+		switch c.opcode & 0x00FF {
+		case 0x9E: // Skip next instruction if key with value of Vx is pressed
+			if c.key[c.V[(c.opcode&0x0F00)>>8]] != 0 {
+				c.PC += 4 // Skip next instruction
+			} else {
+				c.PC += 2 // Just increment PC by 2
+			}
+		case 0xA1: // Skip next instruction if key with value of Vx is not pressed
+			if c.key[c.V[(c.opcode&0x0F00)>>8]] == 0 {
+				c.PC += 4 // Skip next instruction
+			} else {
+				c.PC += 2 // Just increment PC by 2
+			}
+		}
 
 	default:
 		println("Unknown opcode:", c.opcode)
