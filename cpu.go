@@ -274,7 +274,7 @@ func (c *cpu) emulateCycle() {
 			var keypress bool = false
 			for i := 0; i < 16; i++ {
 				if c.key[i] != 0 {
-					c.V[(c.opcode&0x0F00)<<8] = i
+					c.V[(c.opcode&0x0F00)>>8] = byte(i)
 					keypress = true
 				}
 			}
