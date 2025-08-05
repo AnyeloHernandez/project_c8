@@ -299,7 +299,8 @@ func (c *cpu) emulateCycle() {
 			c.I = uint16(c.V[c.opcode&0x0F00>>8])
 			c.PC += 2
 		case 0x0029: // 0xFX29: Sets I to the location of the sprite for the caracter in Vx(considering the lowest nibble only)
-			c.I = uint16(c.V[(c.opcode&0x0F00)>>8]) * 5 // Each character is 5 bytes
+			c.I = uint16(c.V[(c.opcode&0x0F00)>>8]) * 0x5 // Each character is 5 bytes
+			c.PC += 2
 		case 0x0033: // FX33
 			// Stores the binary-coded decimal representation of VX in memory locations I, I+1, and I+2.
 			c.memory[c.I] = c.V[(c.opcode&0x0F00)>>8] / 100
@@ -308,9 +309,20 @@ func (c *cpu) emulateCycle() {
 			c.PC += 2
 		case 0x0055: // 0xFX55: Stores from V0 to Vx in memory, starting at address I. The offset from I is increased by 1 for each
 			// value written, but I itself is left unmodified.
-
+			for i := 0; i <= int((c.opcode&0x0F00)>>8); i++ {
+				c.memory[c.I+uint16(i)] = c.V[uint16(i)]
+			}
+			// On the original interpreter, when the operation is done I = I + X +1
+			c.I += ((c.opcode & 0x0F00) >> 8) + 1
+			c.PC += 2
 		case 0x0065: // 0xFX65: Fills from V0 to VX (including VX) with values from memory, starting at address I.
 			// The offset from I is increased by 1 for each value read, but I itself is left unmodified.
+			for i := 0; i <= int((c.opcode&0x0F00)>>8); i++ {
+				c.V[uint16(i)] = c.memory[c.I+uint16(i)]
+			}
+			// On the original interpreter, when the operation is done I = I + X +1
+			c.I += ((c.opcode & 0x0F00) >> 8) + 1
+			c.PC += 2
 		}
 
 	default:
