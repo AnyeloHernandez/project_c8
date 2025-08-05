@@ -214,12 +214,6 @@ func (c *cpu) emulateCycle() {
 	case 0xC000: // 0xCXNN: Sets Vx to the result of a bitwise AND operation on a random number and NN.
 		c.V[(c.opcode&0x0F00)>>8] = byte(rand.Intn(256)) & 0x00FF
 		c.PC += 2
-	case 0x0033: // FX33
-		// Stores the binary-coded decimal representation of VX in memory locations I, I+1, and I+2.
-		c.memory[c.I] = c.V[(c.opcode&0x0F00)>>8] / 100
-		c.memory[c.I+1] = (c.V[(c.opcode&0x0F00)>>8] / 10) % 10
-		c.memory[c.I+2] = c.V[(c.opcode&0x0F00)>>8] % 10
-		c.PC += 2
 	case 0xD000: // DXYN
 		/* This opcode is responsible for drawing to the display
 		Has a width of 8 pixels and a height of N pixels.
@@ -269,6 +263,54 @@ func (c *cpu) emulateCycle() {
 			} else {
 				c.PC += 2 // Just increment PC by 2
 			}
+		}
+	case 0xF000: // 0xF000 is a prefix for various opcodes
+		switch c.opcode & 0x00FF {
+		case 0x0007: // 0xFX07: Sets Vx to the value of the delay timer
+			c.V[(c.opcode&0x0F00)>>8] = c.delay_timer
+			c.PC += 2
+		case 0x000A: // 0xFX0A: A key press is awaited, and then stored in Vx
+			// get_key() functionality
+			var keypress bool = false
+			for i := 0; i < 16; i++ {
+				if c.key[i] != 0 {
+					c.V[(c.opcode&0x0F00)<<8] = i
+					keypress = true
+				}
+			}
+			// If not key is recieved, skip this cycle
+			if !keypress {
+				return
+			}
+			c.PC += 2
+		case 0x0015: // 0xFX15: Sets the delay timer to Vx
+			c.delay_timer = c.V[(c.opcode&0x0F00)>>8]
+			c.PC += 2
+		case 0x0018: // 0xFX18: Sets the sound timer to Vx
+			c.sound_timer = c.V[(c.opcode&0x0F00)>>8]
+			c.PC += 2
+		case 0x001E: // 0xFX1E: Adds Vx to I. Vf is not affected.
+			// We check if there's an overflow
+			if (c.I + uint16(c.V[c.opcode&0x0F00>>8])) > 0x00FF {
+				c.V[0xF] = 1 // Set carry flag
+			} else {
+				c.V[0xF] = 0 // Clear carry flag
+			}
+			c.I = uint16(c.V[c.opcode&0x0F00>>8])
+			c.PC += 2
+		case 0x0029: // 0xFX29: Sets I to the location of the sprite for the caracter in Vx(considering the lowest nibble only)
+			c.I = uint16(c.V[(c.opcode&0x0F00)>>8]) * 5 // Each character is 5 bytes
+		case 0x0033: // FX33
+			// Stores the binary-coded decimal representation of VX in memory locations I, I+1, and I+2.
+			c.memory[c.I] = c.V[(c.opcode&0x0F00)>>8] / 100
+			c.memory[c.I+1] = (c.V[(c.opcode&0x0F00)>>8] / 10) % 10
+			c.memory[c.I+2] = c.V[(c.opcode&0x0F00)>>8] % 10
+			c.PC += 2
+		case 0x0055: // 0xFX55: Stores from V0 to Vx in memory, starting at address I. The offset from I is increased by 1 for each
+			// value written, but I itself is left unmodified.
+
+		case 0x0065: // 0xFX65: Fills from V0 to VX (including VX) with values from memory, starting at address I.
+			// The offset from I is increased by 1 for each value read, but I itself is left unmodified.
 		}
 
 	default:
