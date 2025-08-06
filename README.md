@@ -1,5 +1,5 @@
 # CPU NOTES
-De momento estoy trabajando con un interprete, esto puede ser lento pero útil para aprender como funciona un emulador y más fácil que un traductor.
+Se está trabajando con un interprete, eso quiere decir que por cada instrucción, verificaremos que es lo que viene para poder ejecutar las instrucciones como en el Chip-8 y guardarlas en el stack del registro V.
 
 ## Fetch-decode loop
 
