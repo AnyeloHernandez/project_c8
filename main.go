@@ -55,24 +55,21 @@ func main() {
 
 	// Initialize the Chip8 system and load the game into the memory
 	c.init()
-	c.loadGame("games/BRIX")
+	c.loadGame("games/PONG")
 
 	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 		if action == glfw.Press {
-			on_keyboard_pressed(&c, window, key, action)
+			on_keyboard_pressed(&c, key, action)
 		} else if action == glfw.Release {
-			on_keyboard_released(&c, window, key, action)
+			on_keyboard_released(&c, key, action)
 		}
 	})
 
 	for !window.ShouldClose() {
-
-		//setupGraphics()
-		// setupInput()
-
 		// Main emulation loop
 		// Emulate one cycle
 		c.emulateCycle()
+		c.codeDebugger()
 
 		if c.drawFlag {
 			draw(window, program, &c)
@@ -95,7 +92,7 @@ func main() {
 	}
 }
 
-func on_keyboard_pressed(c *cpu, window *glfw.Window, key glfw.Key, action glfw.Action) {
+func on_keyboard_pressed(c *cpu, key glfw.Key, action glfw.Action) {
 	if key == glfw.KeyEscape && action == glfw.Press {
 		glfw.Terminate()
 		return
@@ -107,7 +104,7 @@ func on_keyboard_pressed(c *cpu, window *glfw.Window, key glfw.Key, action glfw.
 	}
 }
 
-func on_keyboard_released(c *cpu, window *glfw.Window, key glfw.Key, action glfw.Action) {
+func on_keyboard_released(c *cpu, key glfw.Key, action glfw.Action) {
 	if symbol, ok := KEY_MAP[key]; ok {
 		c.key[symbol] = 0
 		fmt.Printf("Key released: %v, Action: %v\n", key, action)

@@ -205,7 +205,7 @@ func (c *cpu) emulateCycle() {
 			c.V[(c.opcode&0x0F00)>>8] += c.V[(c.opcode&0x00F0)>>4]
 			c.PC += 2
 		case 0x0005: // 8XY5: Vy is subtracted from Vx. VF is set to 0 when there's and underflow. 1 when not
-			if c.V[(c.opcode&0x0F00)>>8] > c.V[(c.opcode&0x00F0)>>4] {
+			if c.V[(c.opcode&0x00F0)>>4] > c.V[(c.opcode&0x0F00)>>8] {
 				c.V[0xF] = 0
 			} else {
 				c.V[0xF] = 1
@@ -247,9 +247,8 @@ func (c *cpu) emulateCycle() {
 		Has a width of 8 pixels and a height of N pixels.
 
 		Each row of 8 pixels is read as a bit-coded starting from memory location.
-
-
 		*/
+
 		x := uint16(c.V[(c.opcode&0x0F00)>>8]) % 64
 		y := uint16(c.V[(c.opcode&0x00F0)>>4]) % 32
 		height := uint16(c.opcode & 0x000F)
@@ -333,7 +332,7 @@ func (c *cpu) emulateCycle() {
 			// Stores the binary-coded decimal representation of VX in memory locations I, I+1, and I+2.
 			c.memory[c.I] = c.V[(c.opcode&0x0F00)>>8] / 100
 			c.memory[c.I+1] = (c.V[(c.opcode&0x0F00)>>8] / 10) % 10
-			c.memory[c.I+2] = c.V[(c.opcode&0x0F00)>>8] % 10
+			c.memory[c.I+2] = (c.V[(c.opcode&0x0F00)>>8] % 100) % 10
 			c.PC += 2
 		case 0x0055: // 0xFX55: Stores from V0 to Vx in memory, starting at address I. The offset from I is increased by 1 for each
 			// value written, but I itself is left unmodified.
@@ -384,4 +383,30 @@ func (c *cpu) debugRender() {
 		fmt.Printf("\n")
 	}
 	fmt.Printf("\n")
+}
+
+func (c *cpu) codeDebugger() {
+	fmt.Printf("Current opcode: 0x%X\n", c.opcode)
+	fmt.Printf("PC: 0x%X, I: 0x%X, SP: %d\n", c.PC, c.I, c.SP)
+	fmt.Printf("V registers: ")
+	for i := 0; i < 16; i++ {
+		fmt.Printf("V[%d]: 0x%X ", i, c.V[i])
+	}
+	fmt.Println()
+	fmt.Printf("Delay Timer: %d, Sound Timer: %d\n", c.delay_timer, c.sound_timer)
+
+	fmt.Println("Stack:")
+	for i := 0; i < int(c.SP); i++ {
+		fmt.Printf("Stack[%d]: 0x%X\n", i, c.stack[i])
+	}
+
+	fmt.Println()
+	fmt.Println("Memory:")
+	for i := 0; i < 16; i++ {
+		fmt.Printf("Memory[0x%03X]: 0x%02X ", i, c.memory[i])
+		if (i+1)%8 == 0 {
+			fmt.Println()
+		}
+	}
+	fmt.Println()
 }
