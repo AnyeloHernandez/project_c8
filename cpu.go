@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"time"
 )
 
 type cpu struct {
@@ -84,7 +83,7 @@ func (c *cpu) init() {
 	c.sound_timer = 0
 
 	c.drawFlag = true
-	rand.Seed(time.Now().UnixNano())
+
 }
 
 /*
