@@ -19,32 +19,47 @@ func main() {
 	program := initOpenGL()
 	cells := makeCells()
 
-	for !window.ShouldClose() {
+	// Initialize the CPU
+	c := cpu{}
 
-		// Initialize the CPU
-		c := cpu{}
+	// Initialize the Chip8 system and load the game into the memory
+	c.init()
+	c.loadGame("games/PONG")
+
+	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+		if action == glfw.Press {
+			on_keyboard_pressed(&c, window, key, action)
+		} else if action == glfw.Release {
+			on_keyboard_released(&c, window, key, action)
+		}
+	})
+
+	for !window.ShouldClose() {
 
 		//setupGraphics()
 		// setupInput()
 
-		// Initialize the Chip8 system and load the game into the memory
-		c.init()
-		c.loadGame("games/PONG2")
-
 		// Main emulation loop
-		for {
-			// Emulate one cycle
-			c.emulateCycle()
+		// Emulate one cycle
+		c.emulateCycle()
 
-			// If the draw flag is set, update the screen
-			if c.drawFlag {
-				//drawGraphics(&c, window, program)
-				draw(cells, window, program, &c)
-				c.debugRender()
-			}
-			glfw.PollEvents()
-			//c.setKeys()
+		if c.drawFlag {
+			draw(cells, window, program, &c)
+			c.debugRender()
+			c.drawFlag = false
 		}
+
+		// Handle timers
+		if c.delay_timer > 0 {
+			c.delay_timer--
+		}
+		if c.sound_timer > 0 {
+			if c.sound_timer == 1 {
+				fmt.Println("BEEP!")
+			}
+			c.sound_timer--
+		}
+		glfw.PollEvents()
 
 	}
 }

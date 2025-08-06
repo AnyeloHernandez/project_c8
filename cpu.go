@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 type cpu struct {
@@ -83,7 +84,7 @@ func (c *cpu) init() {
 	c.sound_timer = 0
 
 	c.drawFlag = true
-
+	rand.Seed(time.Now().UnixNano())
 }
 
 /*
@@ -205,23 +206,24 @@ func (c *cpu) emulateCycle() {
 			c.V[(c.opcode&0x0F00)>>8] += c.V[(c.opcode&0x00F0)>>4]
 			c.PC += 2
 		case 0x0005: // 8XY5: Vy is subtracted from Vx. VF is set to 0 when there's and underflow. 1 when not
-			if c.V[(c.opcode&0x0F00)>>8] >= c.V[(c.opcode&0x00F0)>>4] {
-				c.V[0xF] = 1
-			} else {
+			if c.V[(c.opcode&0x0F00)>>8] > c.V[(c.opcode&0x00F0)>>4] {
 				c.V[0xF] = 0
+			} else {
+				c.V[0xF] = 1
 			}
 			c.V[(c.opcode&0x0F00)>>8] -= c.V[(c.opcode&0x00F0)>>4]
+			c.PC += 2
 		case 0x0006: // 8XY6: Set Vx to Vy and shift Vx one bit to the right, set Vf to the bit shifted out, even if X=F!
 			c.V[0xF] = c.V[(c.opcode&0x0F00)>>8] & 0x1
 			c.V[(c.opcode&0x0F00)>>8] >>= 1
 			c.PC += 2
 		case 0x0007: // 8XY7: Set Vx to the result of subtracting Vx from Vy, Vf is set to 0 if an underflow happened, to 1 if not, even if X=F!
-			if c.V[(c.opcode&0x0F00)>>8] <= c.V[(c.opcode&0x00F0)>>4] {
-				c.V[0xF] = 1
-			} else {
+			if c.V[(c.opcode&0x0F00)>>8] > c.V[(c.opcode&0x00F0)>>4] {
 				c.V[0xF] = 0
+			} else {
+				c.V[0xF] = 1
 			}
-			c.V[(c.opcode&0x0F00)>>8] = c.V[(c.opcode&0x0F00)>>8] - c.V[(c.opcode&0x00F0)>>4]
+			c.V[(c.opcode&0x0F00)>>8] = c.V[(c.opcode&0x00F0)>>4] - c.V[(c.opcode&0x0F00)>>8]
 			c.PC += 2
 		case 0x000E: // 8XYE: Set Vx to Vy and shift Vx one bit to the left, set Vf to the bit shifted out, even if X=F!
 			c.V[0xF] = c.V[(c.opcode&0x0F00)>>8] >> 7
@@ -237,7 +239,7 @@ func (c *cpu) emulateCycle() {
 			c.PC += 2
 		}
 	case 0xB000: // BNNN: Jumps to the addres plus V0. PC = V0 + NNN
-		c.PC = uint16(c.V[0x0] + byte(c.opcode&0x0FFF))
+		c.PC = (c.opcode & 0x0FFF) + uint16(c.V[0])
 	case 0xC000: // 0xCXNN: Sets Vx to the result of a bitwise AND operation on a random number and NN.
 		c.V[(c.opcode&0x0F00)>>8] = byte(rand.Intn(256)) & 0x00FF
 		c.PC += 2
@@ -249,22 +251,22 @@ func (c *cpu) emulateCycle() {
 
 
 		*/
-		x := uint32(c.V[(c.opcode&0x0F00)>>8])
-		y := uint32(c.V[(c.opcode&0x00F0)>>4])
-		height := uint32(c.opcode & 0x000F)
-		var pixel uint32
+		x := uint16(c.V[(c.opcode&0x0F00)>>8]) % 64 // X coordinate (mod 64 to wrap around)
+		y := uint16(c.V[(c.opcode&0x00F0)>>4]) % 32
+		height := uint16(c.opcode & 0x000F)
+		var pixel uint16
 
 		c.V[0xF] = 0 // Resets the register VF (Collision flag)
-		for yline := 0; yline < int(height); yline++ {
-			pixel = uint32(c.memory[c.I+uint16(yline)])
+		for yline := uint16(0); yline < height; yline++ {
+			pixel = uint16(c.memory[c.I+yline])
 			for xline := 0; xline < 8; xline++ {
 				if pixel&(0x80>>xline) != 0 {
-					if c.gfx[(x+uint32(xline)+((y+uint32(yline))*64))] == 1 {
+					if c.gfx[(x+uint16(xline)+((y+uint16(yline))*64))] == 1 {
 						// If pixel is set to 1, set VF to 1 (collision)
 						c.V[0xF] = 1
 					}
 					// Set the pixel value by using XOR
-					c.gfx[x+uint32(xline)+((y+uint32(yline))*64)] ^= 1
+					c.gfx[x+uint16(xline)+((y+uint16(yline))*64)] ^= 1
 				}
 			}
 		}
@@ -323,7 +325,7 @@ func (c *cpu) emulateCycle() {
 			} else {
 				c.V[0xF] = 0 // Clear carry flag
 			}
-			c.I = uint16(c.V[c.opcode&0x0F00>>8])
+			c.I += uint16(c.V[c.opcode&0x0F00>>8])
 			c.PC += 2
 		case 0x0029: // 0xFX29: Sets I to the location of the sprite for the caracter in Vx(considering the lowest nibble only)
 			c.I = uint16(c.V[(c.opcode&0x0F00)>>8]) * 0x5 // Each character is 5 bytes
@@ -336,8 +338,8 @@ func (c *cpu) emulateCycle() {
 			c.PC += 2
 		case 0x0055: // 0xFX55: Stores from V0 to Vx in memory, starting at address I. The offset from I is increased by 1 for each
 			// value written, but I itself is left unmodified.
-			for i := 0; i <= int((c.opcode&0x0F00)>>8); i++ {
-				c.memory[c.I+uint16(i)] = c.V[uint16(i)]
+			for i := uint16(0); i <= ((c.opcode & 0x0F00) >> 8); i++ {
+				c.memory[c.I+i] = c.V[i]
 			}
 			// On the original interpreter, when the operation is done I = I + X +1
 			c.I += ((c.opcode & 0x0F00) >> 8) + 1
@@ -372,7 +374,6 @@ func (c *cpu) emulateCycle() {
 }
 
 func (c *cpu) debugRender() {
-	// Draw
 	for y := 0; y < 32; y++ {
 		for x := 0; x < 64; x++ {
 			if c.gfx[(y*64)+x] == 0 {
@@ -380,8 +381,8 @@ func (c *cpu) debugRender() {
 			} else {
 				fmt.Printf(" ")
 			}
-			fmt.Printf("\n")
 		}
 		fmt.Printf("\n")
 	}
+	fmt.Printf("\n")
 }
