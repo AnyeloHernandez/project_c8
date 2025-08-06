@@ -20,6 +20,25 @@ import (
 	"runtime"
 )
 
+var KEY_MAP = map[glfw.Key]byte{
+	glfw.Key1: 0x1,
+	glfw.Key2: 0x2,
+	glfw.Key3: 0x3,
+	glfw.Key4: 0xC,
+	glfw.KeyQ: 0x4,
+	glfw.KeyW: 0x5,
+	glfw.KeyE: 0x6,
+	glfw.KeyR: 0xD,
+	glfw.KeyA: 0x7,
+	glfw.KeyS: 0x8,
+	glfw.KeyD: 0x9,
+	glfw.KeyF: 0xE,
+	glfw.KeyZ: 0xA,
+	glfw.KeyX: 0x0,
+	glfw.KeyC: 0xB,
+	glfw.KeyV: 0xF,
+}
+
 func main() {
 
 	// Ensure the main thread is the only one running OpenGL
@@ -36,7 +55,7 @@ func main() {
 
 	// Initialize the Chip8 system and load the game into the memory
 	c.init()
-	c.loadGame("games/WALL")
+	c.loadGame("games/BRIX")
 
 	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 		if action == glfw.Press {
@@ -82,85 +101,15 @@ func on_keyboard_pressed(c *cpu, window *glfw.Window, key glfw.Key, action glfw.
 		return
 	}
 
-	switch key {
-	case glfw.Key1:
-		c.key[0x1] = 1
-	case glfw.Key2:
-		c.key[0x2] = 1
-	case glfw.Key3:
-		c.key[0x3] = 1
-	case glfw.Key4:
-		c.key[0xC] = 1
-
-	case glfw.KeyQ:
-		c.key[0x4] = 1
-	case glfw.KeyW:
-		c.key[0x5] = 1
-	case glfw.KeyE:
-		c.key[0x6] = 1
-	case glfw.KeyR:
-		c.key[0xD] = 1
-
-	case glfw.KeyA:
-		c.key[0x7] = 1
-	case glfw.KeyS:
-		c.key[0x8] = 1
-	case glfw.KeyD:
-		c.key[0x9] = 1
-	case glfw.KeyF:
-		c.key[0xE] = 1
-
-	case glfw.KeyZ:
-		c.key[0xA] = 1
-	case glfw.KeyX:
-		c.key[0x0] = 1
-	case glfw.KeyC:
-		c.key[0xB] = 1
-	case glfw.KeyV:
-		c.key[0xF] = 1
-
+	if symbol, ok := KEY_MAP[key]; ok {
+		c.key[symbol] = 1
 		fmt.Printf("Key pressed: %v, Action: %v\n", key, action)
 	}
 }
 
 func on_keyboard_released(c *cpu, window *glfw.Window, key glfw.Key, action glfw.Action) {
-	if action == glfw.Release {
-		switch key {
-		case glfw.Key1:
-			c.key[0x1] = 0
-		case glfw.Key2:
-			c.key[0x2] = 0
-		case glfw.Key3:
-			c.key[0x3] = 0
-		case glfw.Key4:
-			c.key[0xC] = 0
-
-		case glfw.KeyQ:
-			c.key[0x4] = 0
-		case glfw.KeyW:
-			c.key[0x5] = 0
-		case glfw.KeyE:
-			c.key[0x6] = 0
-		case glfw.KeyR:
-			c.key[0xD] = 0
-
-		case glfw.KeyA:
-			c.key[0x7] = 0
-		case glfw.KeyS:
-			c.key[0x8] = 0
-		case glfw.KeyD:
-			c.key[0x9] = 0
-		case glfw.KeyF:
-			c.key[0xE] = 0
-
-		case glfw.KeyZ:
-			c.key[0xA] = 0
-		case glfw.KeyX:
-			c.key[0x0] = 0
-		case glfw.KeyC:
-			c.key[0xB] = 0
-		case glfw.KeyV:
-			c.key[0xF] = 0
-		}
+	if symbol, ok := KEY_MAP[key]; ok {
+		c.key[symbol] = 0
+		fmt.Printf("Key released: %v, Action: %v\n", key, action)
 	}
 }
