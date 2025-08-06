@@ -131,31 +131,31 @@ func drawGraphics(c *cpu, window *glfw.Window, program uint32) {
 }
 
 func drawPixel(x, y int, program uint32) {
-	// Convertir coordenadas de pixel a coordenadas OpenGL (-1 a 1)
+	// Convertir coordenadas CHIP-8 (0-63, 0-31) a OpenGL (-1 a 1)
 	pixelWidth := 2.0 / float32(WIDTH)
 	pixelHeight := 2.0 / float32(HEIGHT)
 
+	// Ajustamos que Y vaya de arriba hacia abajo como en el Chip8
+	adjustedY := HEIGHT - 1 - y
+
 	startX := -1.0 + float32(x)*pixelWidth
-	startY := 1.0 - float32(y)*pixelHeight
+	startY := -1.0 + float32(adjustedY)*pixelHeight
 	endX := startX + pixelWidth
-	endY := startY - pixelHeight
+	endY := startY + pixelHeight
 
-	// Crear un cuadrado
 	vertices := []float32{
-		startX, startY, 0.0, // Top left
-		endX, startY, 0.0, // Top right
-		endX, endY, 0.0, // Bottom right
-
-		startX, startY, 0.0, // Top left
-		endX, endY, 0.0, // Bottom right
 		startX, endY, 0.0, // Bottom left
+		endX, endY, 0.0, // Bottom right
+		endX, startY, 0.0, // Top right
+
+		startX, endY, 0.0, // Bottom left
+		endX, startY, 0.0, // Top right
+		startX, startY, 0.0, // Top left
 	}
 
 	vao := makeVao(vertices)
 	gl.BindVertexArray(vao)
 	gl.DrawArrays(gl.TRIANGLES, 0, 6)
-
-	// Limpiar VAO (opcional, para evitar memory leaks)
 	gl.DeleteVertexArrays(1, &vao)
 }
 
@@ -175,19 +175,14 @@ func makeVao(points []float32) uint32 {
 	return vao
 }
 
-func draw(cells [][]*cell, window *glfw.Window, program uint32, cpu *cpu) {
+func draw(window *glfw.Window, program uint32, cpu *cpu) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.UseProgram(program)
 
-	// for x := range cells {
-	// 	for _, c := range cells[x] {
-	// 		c.draw()
-	// 	}
-	// }
 	for y := 0; y < HEIGHT; y++ {
 		for x := 0; x < WIDTH; x++ {
 			if cpu.gfx[y*WIDTH+x] != 0 {
-				cells[x][y].draw()
+				drawPixel(x, y, program)
 			}
 		}
 	}

@@ -17,14 +17,14 @@ func main() {
 	defer glfw.Terminate()
 
 	program := initOpenGL()
-	cells := makeCells()
+	//cells := makeCells()
 
 	// Initialize the CPU
 	c := cpu{}
 
 	// Initialize the Chip8 system and load the game into the memory
 	c.init()
-	c.loadGame("games/PONG")
+	c.loadGame("games/TANK")
 
 	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 		if action == glfw.Press {
@@ -44,7 +44,7 @@ func main() {
 		c.emulateCycle()
 
 		if c.drawFlag {
-			draw(cells, window, program, &c)
+			draw(window, program, &c)
 			c.debugRender()
 			c.drawFlag = false
 		}

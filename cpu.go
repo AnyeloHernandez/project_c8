@@ -250,7 +250,7 @@ func (c *cpu) emulateCycle() {
 
 
 		*/
-		x := uint16(c.V[(c.opcode&0x0F00)>>8]) % 64 // X coordinate (mod 64 to wrap around)
+		x := uint16(c.V[(c.opcode&0x0F00)>>8]) % 64
 		y := uint16(c.V[(c.opcode&0x00F0)>>4]) % 32
 		height := uint16(c.opcode & 0x000F)
 		var pixel uint16
