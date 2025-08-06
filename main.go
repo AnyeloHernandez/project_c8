@@ -1,3 +1,15 @@
+// //////////////////////////////////////////////////////////////////////////////////////////////////
+// Thanks to Laurence Muller's guide on how to build a Chip8 emulator:
+// https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
+//
+// This is a simple Chip-8 emulator written in Go, using OpenGL for graphics rendering.
+//
+// Name: project-C8
+//
+// Author: AnyeloHernandez
+// Contact: anyelo.g.hernandez@gmail.com
+//
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
 package main
 
 import (
@@ -24,7 +36,7 @@ func main() {
 
 	// Initialize the Chip8 system and load the game into the memory
 	c.init()
-	c.loadGame("games/TANK")
+	c.loadGame("games/WALL")
 
 	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 		if action == glfw.Press {
@@ -45,7 +57,7 @@ func main() {
 
 		if c.drawFlag {
 			draw(window, program, &c)
-			c.debugRender()
+			//c.debugRender()
 			c.drawFlag = false
 		}
 

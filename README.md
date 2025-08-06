@@ -23,3 +23,20 @@ while (executed_cycles < cycles_to_execute){
     execute(instruction);
 }
 ```
+
+
+# References
+
+Based on How to write an emulator (CHIP-8 interpreter) 
+https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
+
+Opcodes taken from:
+https://en.wikipedia.org/wiki/CHIP-8#External_links
+
+and: https://chip8.gulrak.net/
+
+### More documentation:
+Emulation Basics: Write your own Chip 8 Emulator/Interpreter: https://omokute.blogspot.com/2012/06/emulation-basics-write-your-own-chip-8.html
+
+Study of the techniques for emulation
+programming: http://www.codeslinger.co.uk/files/emu.pdf
