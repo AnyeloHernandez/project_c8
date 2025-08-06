@@ -48,15 +48,42 @@ var chip8_fontset = [80]byte{
 
 func (c *cpu) init() {
 	// Init registers and memory once
-	c.PC = 0x200     // Program counter starts at 0x200
-	c.I = 0x000      // Index register starts at 0x000
-	c.opcode = 0x000 // Reset opcode
-	c.SP = 0x00      // Stack pointer starts at 0x00
+	c.PC = 0x200 // Program counter starts at 0x200
+	c.I = 0      // Index register starts at 0x000
+	c.opcode = 0 // Reset opcode
+	c.SP = 0     // Stack pointer starts at 0x00
+
+	// Clear display
+	for i := range 2048 {
+		c.gfx[i] = 0
+	}
+
+	// Clear stack
+	for i := range 16 {
+		c.stack[i] = 0
+	}
+
+	for i := range 16 {
+		c.key[i] = 0
+		c.V[i] = 0
+	}
+
+	// Clear memory
+	for i := range 4096 {
+		c.memory[i] = 0
+	}
 
 	// Load fontset into memory
 	for i := 0; i < 80; i++ {
-		c.memory[i+0x50] = chip8_fontset[i]
+		c.memory[i] = chip8_fontset[i]
 	}
+
+	// Reset timers
+	c.delay_timer = 0
+	c.sound_timer = 0
+
+	c.drawFlag = true
+
 }
 
 /*
@@ -341,5 +368,20 @@ func (c *cpu) emulateCycle() {
 			}
 			c.sound_timer--
 		}
+	}
+}
+
+func (c *cpu) debugRender() {
+	// Draw
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 64; x++ {
+			if c.gfx[(y*64)+x] == 0 {
+				fmt.Printf("O")
+			} else {
+				fmt.Printf(" ")
+			}
+			fmt.Printf("\n")
+		}
+		fmt.Printf("\n")
 	}
 }
