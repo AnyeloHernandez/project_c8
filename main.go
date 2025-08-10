@@ -57,13 +57,7 @@ func main() {
 	c.init()
 	c.loadGame("games/PONG")
 
-	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
-		if action == glfw.Press {
-			on_keyboard_pressed(&c, key, action)
-		} else if action == glfw.Release {
-			on_keyboard_released(&c, key, action)
-		}
-	})
+	keyboardHandler(window, &c)
 
 	for !window.ShouldClose() {
 		// Main emulation loop
@@ -109,4 +103,15 @@ func on_keyboard_released(c *cpu, key glfw.Key, action glfw.Action) {
 		c.key[symbol] = 0
 		fmt.Printf("Key released: %v, Action: %v\n", key, action)
 	}
+}
+
+func keyboardHandler(window *glfw.Window, c *cpu) {
+	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+		switch action {
+		case glfw.Press:
+			on_keyboard_pressed(c, key, action)
+		case glfw.Release:
+			on_keyboard_released(c, key, action)
+		}
+	})
 }

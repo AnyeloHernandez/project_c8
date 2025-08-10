@@ -226,7 +226,7 @@ func makeCells() [][]*cell {
 }
 
 func newCell(x, y int) *cell {
-	points := make([]float32, len(square), len(square))
+	points := make([]float32, len(square))
 	copy(points, square)
 
 	for i := 0; i < len(points); i++ {
