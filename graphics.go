@@ -51,6 +51,22 @@ const (
 			gl_FragColor = vec4(1, 1, 1, 1.0);
 		}
 	` + "\x00"
+
+	vertexShaderSourceV3 = `
+		#version 330 core
+		layout(location = 0) in vec3 vp;
+		void main() {
+			gl_Position = vec4(vp, 1.0);
+		}
+	` + "\x00"
+
+	fragmentShaderSourceV3 = `
+		#version 330 core
+		out vec4 frag_colour;
+		void main() {
+			frag_colour = vec4(1, 1, 1, 1.0);
+		}
+	` + "\x00"
 )
 
 var (
@@ -108,16 +124,40 @@ func initGlfw() *glfw.Window {
 
 func initOpenGL() uint32 {
 	var major int
-	var window uint32
 	major, _, _ = glfw.GetVersion()
 	if major < 3 {
 		println("OpenGL version 2 found")
-		window = initOpenGL2()
+		return initOpenGL2()
+	} else if major == 3 {
+		return initOpenGL3()
 	} else {
 		println("OpenGL version 3 or higher found")
-		window = initOpenGL4()
+		return initOpenGL4()
 	}
-	return window
+
+}
+
+func initOpenGL3() uint32 {
+	if err := gl.Init(); err != nil {
+		panic(fmt.Errorf("failed to initialize OpenGL: %v", err))
+	}
+
+	version := gl.GoStr(gl.GetString(gl.VERSION))
+	fmt.Printf("OpenGL version: %s\n", version)
+
+	vertexShader, err := compileShader(vertexShaderSourceV3, gl.VERTEX_SHADER)
+	if err != nil {
+		panic(fmt.Errorf("failed to compile vertex shader: %v", err))
+	}
+	fragmentShader, err := compileShader(fragmentShaderSourceV3, gl.FRAGMENT_SHADER)
+	if err != nil {
+		panic(fmt.Errorf("failed to compile fragment shader: %v", err))
+	}
+	prog := gl.CreateProgram()
+	gl.AttachShader(prog, vertexShader)
+	gl.AttachShader(prog, fragmentShader)
+	gl.LinkProgram(prog)
+	return prog
 }
 
 func initOpenGL2() uint32 {
