@@ -259,6 +259,9 @@ func (c *cpu) emulateCycle() {
 			pixel = uint16(c.memory[c.I+yline])
 			for xline := 0; xline < 8; xline++ {
 				if pixel&(0x80>>xline) != 0 {
+					if (x + uint16(xline) + ((y + uint16(yline)) * 64)) >= 2048 {
+						continue // Prevent out of bounds access
+					}
 					if c.gfx[(x+uint16(xline)+((y+uint16(yline))*64))] == 1 {
 						// If pixel is set to 1, set VF to 1 (collision)
 						c.V[0xF] = 1
