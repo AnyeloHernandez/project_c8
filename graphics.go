@@ -36,6 +36,21 @@ const (
 			frag_colour = vec4(1, 1, 1, 1.0);
 		}
 	` + "\x00"
+
+	vertexShaderSourceV2 = `
+		#version 120
+		attribute vec3 vp;
+		void main() {
+			gl_Position = vec4(vp, 1.0);
+		}
+	` + "\x00"
+
+	fragmentShaderSourceV2 = `
+		#version 120
+		void main() {
+			gl_FragColor = vec4(1, 1, 1, 1.0);
+		}
+	` + "\x00"
 )
 
 var (
@@ -75,11 +90,12 @@ func initGlfw() *glfw.Window {
 	if err := glfw.Init(); err != nil {
 		panic(fmt.Errorf("failed to initialize GLFW: %v", err))
 	}
-	glfw.WindowHint(glfw.ContextVersionMajor, 4)
-	glfw.WindowHint(glfw.ContextVersionMinor, 1)
-	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
-	glfw.WindowHint(glfw.Resizable, glfw.False)
-	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
+	// glfw.WindowHint(glfw.ContextVersionMajor, 4)
+	// glfw.WindowHint(glfw.ContextVersionMinor, 1)
+	// glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
+	// glfw.WindowHint(glfw.Resizable, glfw.False)
+	// glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
+
 	// Create a windowed mode window and its OpenGL context
 	window, err := glfw.CreateWindow(WIDTH*10, HEIGHT*10, "Chip8 Emulator", nil, nil)
 	if err != nil {
@@ -91,6 +107,43 @@ func initGlfw() *glfw.Window {
 }
 
 func initOpenGL() uint32 {
+	var major int
+	var window uint32
+	major, _, _ = glfw.GetVersion()
+	if major < 3 {
+		println("OpenGL version 2 found")
+		window = initOpenGL2()
+	} else {
+		println("OpenGL version 3 or higher found")
+		window = initOpenGL4()
+	}
+	return window
+}
+
+func initOpenGL2() uint32 {
+	if err := gl.Init(); err != nil {
+		panic(fmt.Errorf("failed to initialize OpenGL: %v", err))
+	}
+
+	version := gl.GoStr(gl.GetString(gl.VERSION))
+	fmt.Printf("OpenGL version: %s\n", version)
+
+	vertexShader, err := compileShader(vertexShaderSourceV2, gl.VERTEX_SHADER)
+	if err != nil {
+		panic(fmt.Errorf("failed to compile vertex shader: %v", err))
+	}
+	fragmentShader, err := compileShader(fragmentShaderSourceV2, gl.FRAGMENT_SHADER)
+	if err != nil {
+		panic(fmt.Errorf("failed to compile fragment shader: %v", err))
+	}
+	prog := gl.CreateProgram()
+	gl.AttachShader(prog, vertexShader)
+	gl.AttachShader(prog, fragmentShader)
+	gl.LinkProgram(prog)
+	return prog
+}
+
+func initOpenGL4() uint32 {
 	if err := gl.Init(); err != nil {
 		panic(fmt.Errorf("failed to initialize OpenGL: %v", err))
 	}
