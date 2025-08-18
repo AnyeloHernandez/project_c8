@@ -52,11 +52,11 @@ func main() {
 
 	keyboardHandler(window, &cpu)
 
-	windowShouldCloseHandler(&cpu, window, program)
+	emulationLoop(&cpu, window, program)
 
 }
 
-func windowShouldCloseHandler(cpu *cpu, window *glfw.Window, program uint32) {
+func emulationLoop(cpu *cpu, window *glfw.Window, program uint32) {
 	for !window.ShouldClose() {
 		// Main emulation loop
 		// Emulate one cycle
