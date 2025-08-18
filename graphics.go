@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	"runtime"
+
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
@@ -101,6 +103,12 @@ type cell struct {
 
 // 	}
 // }
+
+func initWindowEmulator() *glfw.Window {
+	runtime.LockOSThread()
+	// Initialize GLFW
+	return initGlfw()
+}
 
 func initGlfw() *glfw.Window {
 	if err := glfw.Init(); err != nil {
@@ -268,7 +276,7 @@ func makeVao(points []float32) uint32 {
 	return vao
 }
 
-func draw(window *glfw.Window, program uint32, cpu *cpu) {
+func drawSpriteOnWindow(window *glfw.Window, program uint32, cpu *cpu) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.UseProgram(program)
 

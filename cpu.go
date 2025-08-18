@@ -46,7 +46,7 @@ var chip8_fontset = [80]byte{
 0x200-0xFFF - Program ROM and work RAM
 */
 
-func (c *cpu) init() {
+func (c *cpu) initEmulator() {
 	// Init registers and memory once
 	c.PC = 0x200 // Program counter starts at 0x200
 	c.I = 0      // Index register starts at 0x000
@@ -371,6 +371,26 @@ func (c *cpu) emulateCycle() {
 			}
 			c.sound_timer--
 		}
+	}
+}
+
+func (c *cpu) handleTimers() {
+	c.handleDelayTimer()
+	c.handleSoundTimer()
+}
+
+func (c *cpu) handleDelayTimer() {
+	if c.delay_timer > 0 {
+		c.delay_timer--
+	}
+}
+
+func (c *cpu) handleSoundTimer() {
+	if c.sound_timer > 0 {
+		if c.sound_timer == 1 {
+			fmt.Println("BEEP!")
+		}
+		c.sound_timer--
 	}
 }
 

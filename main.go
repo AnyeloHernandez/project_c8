@@ -16,8 +16,6 @@ import (
 	"fmt"
 
 	"github.com/go-gl/glfw/v3.2/glfw"
-
-	"runtime"
 )
 
 var KEY_MAP = map[glfw.Key]byte{
@@ -41,46 +39,39 @@ var KEY_MAP = map[glfw.Key]byte{
 
 func main() {
 
-	// Ensure the main thread is the only one running OpenGL
-	runtime.LockOSThread()
-	// Initialize GLFW
-	window := initGlfw()
+	window := initWindowEmulator()
 	defer glfw.Terminate()
-
 	program := initOpenGL()
-	//cells := makeCells()
 
 	// Initialize the CPU
-	c := cpu{}
+	cpu := cpu{}
 
 	// Initialize the Chip8 system and load the game into the memory
-	c.init()
-	c.loadGame("games/PONG")
+	cpu.initEmulator()
+	cpu.loadGame("games/PONG")
 
-	keyboardHandler(window, &c)
+	keyboardHandler(window, &cpu)
 
+	windowShouldCloseHandler(&cpu, window, program)
+
+}
+
+func windowShouldCloseHandler(cpu *cpu, window *glfw.Window, program uint32) {
 	for !window.ShouldClose() {
 		// Main emulation loop
 		// Emulate one cycle
-		c.emulateCycle()
-		c.codeDebugger()
+		cpu.emulateCycle()
+		cpu.codeDebugger()
 
-		if c.drawFlag {
-			draw(window, program, &c)
-			//c.debugRender()
-			c.drawFlag = false
+		if cpu.drawFlag {
+			drawSpriteOnWindow(window, program, cpu)
+			//cpu.debugRender()
+			cpu.drawFlag = false
 		}
 
 		// Handle timers
-		if c.delay_timer > 0 {
-			c.delay_timer--
-		}
-		if c.sound_timer > 0 {
-			if c.sound_timer == 1 {
-				fmt.Println("BEEP!")
-			}
-			c.sound_timer--
-		}
+		cpu.handleTimers()
+
 		glfw.PollEvents()
 
 	}
