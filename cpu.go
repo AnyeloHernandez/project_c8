@@ -357,20 +357,10 @@ func (c *cpu) emulateCycle() {
 
 	default:
 		println("Unknown opcode:", c.opcode)
-		// Decode opcode
-
-		// Execute Opcode
-
 		// Update timers
-		if c.delay_timer > 0 {
-			c.delay_timer--
-		}
-		if c.sound_timer > 0 {
-			if c.sound_timer == 1 {
-				println("BEEP!") // Sound timer reached 0, play sound
-			}
-			c.sound_timer--
-		}
+		c.handleDelayTimer()
+		c.handleSoundTimer()
+
 	}
 }
 
